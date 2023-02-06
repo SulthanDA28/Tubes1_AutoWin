@@ -1,5 +1,5 @@
-###Tugas Besar 1 Strategi ALgoritma
-##Kelompok Auto Win
+# Tugas Besar 1 Strategi ALgoritma
+## Kelompok Auto Win
 <br>
 
  Disusun oleh:
