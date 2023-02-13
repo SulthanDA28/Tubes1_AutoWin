@@ -1,5 +1,5 @@
 package Models;
-
+import java.lang.*;
 Public Class Vector {
     private double x;
     private double y;
@@ -21,9 +21,15 @@ Public Class Vector {
         double hasil = a.x*b.x + a.y*b.y;
         return hasil;
     }
-
-    public Vector cross(Vector a,Vector b){
-        
+    public double magnitude(Vector a){
+        double kuadrat = a.x*a.x+b.y*b.y;
+        double hasil = Math.sqrt(kuadrat);
+        return hasil;
+    }
+    public int sudut(Vector a,Vector b){
+        double hitung = (magnitude(a)*magnitude(b))/dot(a,b);
+        int hasil = Math.acos(hitung);
+        return hasil
     }
 
 }
