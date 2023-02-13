@@ -9,15 +9,20 @@ Public Class Vector {
         this.y = 0;
     }
     public Vector(double x, double y){
-        this.x = 0;
-        this.y = 0;
+        this.x = x;
+        this.y = y;
     }
     public Vector(Vector a){
         this.x = a.x;
         this.y = a.y;
     }
 
-    public Vector dot(Vector a, Vector b){
+    public double dot(Vector a, Vector b){
+        double hasil = a.x*b.x + a.y*b.y;
+        return hasil;
+    }
+
+    public Vector cross(Vector a,Vector b){
         
     }
 
