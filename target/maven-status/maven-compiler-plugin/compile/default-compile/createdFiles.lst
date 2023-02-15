@@ -1,4 +1,5 @@
 Main.class
+Models\Vector.class
 Enums\PlayerActions.class
 Models\GameState.class
 Services\BotService.class

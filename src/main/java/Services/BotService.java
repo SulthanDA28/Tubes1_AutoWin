@@ -12,6 +12,7 @@ public class BotService {
     private PlayerAction playerAction;
     private GameState gameState;
 
+    
     public BotService() {
         this.playerAction = new PlayerAction();
         this.gameState = new GameState();
@@ -35,8 +36,8 @@ public class BotService {
     }
 
     public void computeNextPlayerAction(PlayerAction playerAction) {
-        
-        if (ambilMakanan(playerAction)){
+        Position tujuan = new Position();
+        if (ambilMakanan(playerAction, tujuan)){
             System.out.println("Ambil makanan");
         } else {
             System.out.println("Random");
@@ -50,7 +51,7 @@ public class BotService {
         System.out.println();
     }
 
-    private boolean ambilMakanan(PlayerAction playerAction){
+    private boolean ambilMakanan(PlayerAction playerAction, Position tujuan){
         if (!gameState.getGameObjects().isEmpty()) {
             var foodList = gameState.getGameObjects()
                     .stream().filter(item -> item.getGameObjectType() == ObjectTypes.FOOD)
@@ -64,6 +65,8 @@ public class BotService {
                 if (radPlayer <= getGameState().world.radius){
                     playerAction.heading = getHeadingBetween(foodList.get(i));
                     playerAction.action = PlayerActions.FORWARD;
+                    tujuan.x = foodList.get(i).position.x;
+                    tujuan.y = foodList.get(i).position.y;
                     return true;
                 }
                 i++;

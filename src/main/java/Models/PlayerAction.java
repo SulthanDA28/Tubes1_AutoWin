@@ -7,7 +7,7 @@ public class PlayerAction {
 
   public UUID playerId;
   public PlayerActions action;
-  public int heading;
+  public int heading; // 0-359  
 
   public UUID getPlayerId() {
     return playerId;
