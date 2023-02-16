@@ -37,6 +37,13 @@ public class BotService {
 
     public void computeNextPlayerAction(PlayerAction playerAction) {
         Position tujuan = new Position();
+        if (hindariMusuh(playerAction, tujuan)){
+            System.out.println("Menghindari musuh");
+        }else 
+        if (kejarMusuh(playerAction)){
+            System.out.println("Kejar musuh");
+        }
+        else
         if (ambilSuperFood(playerAction, tujuan)){
             System.out.println("Ambil superfood");
         } else
@@ -52,6 +59,37 @@ public class BotService {
         System.out.println(playerAction.action);
         System.out.println(playerAction.heading);
         System.out.println();
+    }
+
+    private boolean hindariMusuh(PlayerAction playerAction, Position tujuan){
+        var listPlayer = gameState.getPlayerGameObjects();
+        List<GameObject> listLawanDihindari = new ArrayList<GameObject>();
+        int maxSpeed = -1;
+        for (int i = 0;i < listPlayer.size();i++){
+            var lawan = listPlayer.get(i);
+            if (lawan.getId() != bot.getId()
+                && isInRadius(lawan, bot.getPosition().getX(), bot.getPosition().getY(), Math.max(50,bot.getSize()+20))
+                && lawan.getSize() > bot.getSize()){
+                    listLawanDihindari.add(lawan);
+                    maxSpeed = Math.max(maxSpeed,lawan.getSpeed());
+                }
+        }
+        if (!listLawanDihindari.isEmpty()){
+            if (bot.getSpeed() < maxSpeed && bot.getSize() > 10 && ((bot.effects & Effects.AFTERBURNER.value)==0)){
+                playerAction.action = PlayerActions.STARTAFTERBURNER;
+            } else {
+                playerAction.action = PlayerActions.FORWARD;
+            }
+            int meanArahLawan = 0;
+            for (int i = 0;i < listLawanDihindari.size();i++){
+                meanArahLawan += getHeadingBetween(listLawanDihindari.get(i));
+            }
+            meanArahLawan /= listLawanDihindari.size();
+            playerAction.heading = (meanArahLawan+90)%360;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private boolean ambilMakanan(PlayerAction playerAction, Position tujuan){
@@ -180,12 +218,8 @@ public class BotService {
         int i = 0;
         while(i<musuhList.size())
         {
-            if(!isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, Math.max(20, bot.getSize()+10)))
-            {
-                break;
-            }
             double sizemusuh = musuhList.get(i).getSize();
-            if(bot.getSize()+5>sizemusuh)
+            if(isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*3)&&bot.getSize()+6>sizemusuh)
             {
                 aksi.heading = getHeadingBetween(musuhList.get(i));
                 aksi.action = PlayerActions.FORWARD;
