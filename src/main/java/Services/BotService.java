@@ -37,6 +37,9 @@ public class BotService {
 
     public void computeNextPlayerAction(PlayerAction playerAction) {
         Position tujuan = new Position();
+        if (ambilSuperFood(playerAction, tujuan)){
+            System.out.println("Ambil superfood");
+        } else
         if (ambilMakanan(playerAction, tujuan)){
             System.out.println("Ambil makanan");
         } else {
@@ -60,13 +63,38 @@ public class BotService {
                     .collect(Collectors.toList());
             int i = 0;
             // ambil makanan yang tidak menyebabkan player menyentuh batas arena
-            while (true && i < foodList.size()){
-                double radPlayer = getDistanceBetween(foodList.get(i), new Position(0, 0)) + bot.getSize();
+            while (i < foodList.size()){
+                double radPlayer = getDistanceBetween(foodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius){
                     playerAction.heading = getHeadingBetween(foodList.get(i));
                     playerAction.action = PlayerActions.FORWARD;
                     tujuan.x = foodList.get(i).position.x;
                     tujuan.y = foodList.get(i).position.y;
+                    return true;
+                }
+                i++;
+            }
+        }
+        return false;
+    }
+
+    private boolean ambilSuperFood(PlayerAction playerAction, Position tujuan){
+        if (!gameState.getGameObjects().isEmpty()) {
+            var superFoodList = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERFOOD)
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+            int i = 0;
+            // ambil superfood yang tidak menyebabkan player menyentuh batas arena dan di dalam radius player
+            while (i < superFoodList.size()){
+                if (!isInRadius(superFoodList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*3)) break;
+                double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
+                if (radPlayer <= getGameState().world.radius) {
+                    playerAction.heading = getHeadingBetween(superFoodList.get(i));
+                    playerAction.action = PlayerActions.FORWARD;
+                    tujuan.x = superFoodList.get(i).position.x;
+                    tujuan.y = superFoodList.get(i).position.y;
                     return true;
                 }
                 i++;
@@ -95,9 +123,9 @@ public class BotService {
         return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
     }
 
-    private double getDistanceBetween(GameObject object1, Position p) {
-        var triangleX = Math.abs(object1.getPosition().x - p.getX());
-        var triangleY = Math.abs(object1.getPosition().y - p.getY());
+    private double getDistanceBetween(GameObject object1, int x, int y) {
+        var triangleX = Math.abs(object1.getPosition().x - x);
+        var triangleY = Math.abs(object1.getPosition().y - y);
         return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
     }
 
@@ -111,13 +139,16 @@ public class BotService {
         return (int) (v * (180 / Math.PI));
     }
 
+    private boolean isInRadius(GameObject a, int x, int y, double r){
+        double length = getDistanceBetween(a, x, y);
+        return (length < a.getSize()+r);
+    }
+
     private boolean willIntersect(GameObject a, GameObject b, Position dest){
         int B = 1;
         int A = -(dest.y-a.getPosition().y)/(dest.x-a.getPosition().x);
         int C = -(a.getPosition().y*A+a.getPosition().x*B);
         double dist = Math.abs(A*b.getPosition().x + B*b.getPosition().y+C)/Math.sqrt(A*A+B*B);
-
-
         return Vector.sudut(a.getPosition(),dest,b.getPosition()) <= 90 && 
                 Vector.sudut(dest, a.getPosition(), b.getPosition()) <= 90 &&
                 a.size+b.size < dist;
@@ -128,7 +159,7 @@ public class BotService {
         return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE || objT == ObjectTypes.PLAYER || objT == ObjectTypes.PLAYER;
     }
 
-    private boolean isFreeObstacle(GameObject a, GameObject b, GameObject obstacle){
+    private boolean isPathFreeOFObstacle(GameObject a, GameObject b, GameObject obstacle){
         List<GameObject> gameobj = gameState.getGameObjects();
         for (int i = 0;i < gameobj.size();i++){
             if (isObstacle(gameobj.get(i)) &&
