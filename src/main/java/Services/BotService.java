@@ -169,4 +169,31 @@ public class BotService {
         }
         return true;
     }
+
+    private boolean kejarMusuh(PlayerAction aksi)
+    {
+        var musuhList = gameState.getPlayerGameObjects()
+            .stream().filter(item->item.getId()!=bot.getId())
+            .sorted(Comparator.comparing(item->getDistanceBetween(bot, item)))
+            .collect(Collectors.toList());
+        
+        int i = 0;
+        while(i<musuhList.size())
+        {
+            if(!isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, Math.max(20, bot.getSize()+10)))
+            {
+                break;
+            }
+            double sizemusuh = musuhList.get(i).getSize();
+            if(bot.getSize()+5>sizemusuh)
+            {
+                aksi.heading = getHeadingBetween(musuhList.get(i));
+                aksi.action = PlayerActions.FORWARD;
+                return true;
+            }
+            i++;
+        }
+        return false;
+        
+    }
 }
