@@ -159,7 +159,7 @@ public class BotService {
         return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE || objT == ObjectTypes.PLAYER || objT == ObjectTypes.PLAYER;
     }
 
-    private boolean isPathFreeOFObstacle(GameObject a, GameObject b, GameObject obstacle){
+    private boolean isPathFreeOfObstacle(GameObject a, GameObject b, GameObject obstacle){
         List<GameObject> gameobj = gameState.getGameObjects();
         for (int i = 0;i < gameobj.size();i++){
             if (isObstacle(gameobj.get(i)) &&
