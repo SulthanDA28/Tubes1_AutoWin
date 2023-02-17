@@ -43,7 +43,9 @@
 
 <br>
 
-
+ - Jalankan file run.bat
+ - Buka visuallizer lalu buka game sesuai dengan OS yang digunakan
+ - Load dengan log file terbaru
 
 
  
