@@ -215,7 +215,8 @@ public class BotService {
         ObjectTypes objT = a.getGameObjectType();
         return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE;
     }
-
+    // Fungsi Strategi Heuristik
+    // Fungsi untuk menghindar dari musuh
     private boolean hindariMusuh(PlayerAction playerAction, Position tujuan){
         var listPlayer = gameState.getPlayerGameObjects();
         List<GameObject> listLawanDihindari = new ArrayList<GameObject>();
@@ -258,7 +259,7 @@ public class BotService {
             return false;
         }
     }
-
+    // Fungsi untuk menghindar dari serangan torpedo
     private boolean hindariTorpedo(PlayerAction playerAction){
         if (!gameState.getGameObjects().isEmpty()) {
             var listTorp = gameState.getGameObjects()
@@ -293,7 +294,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk mengambil makanan
     private boolean ambilMakanan(PlayerAction playerAction, Position tujuan){
         if (!gameState.getGameObjects().isEmpty()) {
             var foodList = gameState.getGameObjects()
@@ -316,7 +317,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk mengambil superfood
     private boolean ambilSuperFood(PlayerAction playerAction, Position tujuan){
         if (!gameState.getGameObjects().isEmpty()) {
             var superFoodList = gameState.getGameObjects()
@@ -339,7 +340,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk menembakkan torpedo
     private boolean tembakTorpedo(PlayerAction player){
         var listMusuh = gameState.getPlayerGameObjects().stream()
                     .filter(item -> item.getId() != bot.getId()).sorted(Comparator
@@ -354,7 +355,7 @@ public class BotService {
         }
         return false;
     }
-    
+    // Fungsi untuk mengejar musuh
     private boolean kejarMusuh(PlayerAction aksi)
     {
         // kejar kandidat musuh terdekat
@@ -386,9 +387,8 @@ public class BotService {
             i++;
         }
         return false;
-        
     }
-
+    // Fungsi untuk merebut supernova
     private boolean ambilSupernova(PlayerAction aksi)
     {
         if (!gameState.getGameObjects().isEmpty()){
@@ -431,7 +431,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk menembakkan supernova
     private boolean tembakSupernova(PlayerAction aksi){
         if (bot.superNovaAvailable > 0){
             if (wait < 5) wait++;
@@ -448,7 +448,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk meledakkan supernova
     private boolean ledakkanSupernova(PlayerAction aksi){
         var listSupernovaBomb = gameState.getGameObjects().stream().filter(item->item.getGameObjectType() == ObjectTypes.SUPERNOVABOMB)
                                 .collect(Collectors.toList());
@@ -459,8 +459,7 @@ public class BotService {
                 aksi.action = PlayerActions.DETONATESUPERNOVA;
                 return true;
             }
-            var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
-                            collect(Collectors.toList());
+            var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).collect(Collectors.toList());
             for (int i = 0;i < listMusuh.size();i++){
                 // ledakkan jika ledakan supernova akan mengenai musuh dan ledakan tersebut tidak mengenai pemain
                 if (isInRadius(listMusuh.get(i), bom.getPosition(), 150) && !isInRadius(bot, bom.getPosition(), 150)){
