@@ -60,28 +60,32 @@ public class BotService {
             System.out.println(String.format("TELEPORTETET %d %d",firedTeleporter.position.x,firedTeleporter.position.y));
         }
 
-        boolean isChased = false;
+        boolean isChased = false, isKejarSuper = false;
         Position tujuan = new Position();
         if (hindariTorpedo(playerAction)){
-            //System.out.println("Menghindari torpedo");
+            System.out.println("Menghindari torpedo");
             isChased = true;
         } else
         if (hindariMusuh(playerAction, tujuan)){
-            //System.out.println("Menghindari musuh");
+            System.out.println("Menghindari musuh");
             isChased = true;
         }else 
         if (kejarMusuh(playerAction)){
             System.out.println("Kejar musuh");
         }
         else
+        if (ambilSupernova(playerAction)){
+            System.out.println("Mengejar supernova");
+            isKejarSuper = true;
+        } else
         if (ambilSuperFood(playerAction, tujuan)){
-           // System.out.println("Ambil superfood");
+           System.out.println("Ambil superfood");
         } else
         if (ambilMakanan(playerAction, tujuan)){
-            //System.out.println("Ambil makanan");
+            System.out.println("Ambil makanan");
         } else
         if (tembakTorpedo(playerAction)){
-            //System.out.println("Serang lawan");
+            System.out.println("Serang lawan");
         } else {
             System.out.println("Random");
             playerAction.action = PlayerActions.FORWARD;
@@ -90,7 +94,7 @@ public class BotService {
         }
         
         double radPlayer = getDistanceBetween(bot, 0, 0) + bot.getSize();
-        if (bot.getSize() < 10 || (isInEffect(bot, Effects.AFTERBURNER) && !isChased)){
+        if (isInEffect(bot, Effects.AFTERBURNER) && (bot.getSize() < 10 || !isChased || !isKejarSuper)){
             playerAction.action = PlayerActions.STOPAFTERBURNER;
         } else
         if (radPlayer >= getGameState().world.radius){
@@ -128,7 +132,7 @@ public class BotService {
         }
 
         this.playerAction = playerAction;
-        if (playerAction.action == PlayerActions.TELEPORT){
+        if (playerAction.action == PlayerActions.TELEPORT || true){
             System.out.println(this.playerAction.action);
             System.out.println(this.playerAction.heading);
             System.out.println();
@@ -379,15 +383,22 @@ public class BotService {
             .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERNOVAPICKUP)
             .collect(Collectors.toList());
             if(supernova.size()>0){
-                if(aksi.action!=PlayerActions.STARTAFTERBURNER){
-                    aksi.action = PlayerActions.STARTAFTERBURNER;
-                }
-                else if(aksi.action==PlayerActions.STARTAFTERBURNER && bot.getSize()>=10)
-                {
-                    aksi.action = PlayerActions.STARTAFTERBURNER;
-                }
-                else{
-                    aksi.action = PlayerActions.FORWARD;
+                if (isInRadius(bot, supernova.get(0).getPosition(), 250)){ 
+                    if(!isInEffect(bot, Effects.AFTERBURNER)&& bot.getSize()>10){
+                        aksi.action = PlayerActions.STARTAFTERBURNER;
+                    } 
+                    else{
+                        aksi.action = PlayerActions.FORWARD;
+                    }
+                    
+                } else {
+                    if (firedTeleporter == null && bot.getSize() >= 40){
+                        aksi.action = PlayerActions.FIRETELEPORT;
+                    } else if (firedTeleporter != null && isInRadius(supernova.get(0), firedTeleporter.position, bot.getSize())){
+                        aksi.action = PlayerActions.TELEPORT;
+                    } else {
+                        aksi.action = PlayerActions.FORWARD;
+                    }
                 }
                 aksi.heading = getHeadingBetween(supernova.get(0));
                 return true;
