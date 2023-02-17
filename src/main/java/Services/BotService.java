@@ -170,7 +170,7 @@ public class BotService {
                         if (bot.getSize() > 40 && isInRadius(listTorp.get(i), bot.getPosition().x , bot.getPosition().y, bot.getSize()*2)){
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                         } else {
-                            if (!isInEffect(bot, Effects.AFTERBURNER)) 
+                            if (bot.getSize() >= 10 && !isInEffect(bot, Effects.AFTERBURNER)) 
                                 playerAction.action = PlayerActions.STARTAFTERBURNER;
                             else 
                                 playerAction.action = PlayerActions.FORWARD;
