@@ -214,7 +214,8 @@ public class BotService {
         ObjectTypes objT = a.getGameObjectType();
         return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE;
     }
-
+    // Fungsi Strategi Heuristik
+    // Fungsi untuk menghindar dari musuh
     private boolean hindariMusuh(PlayerAction playerAction, Position tujuan){
         var listPlayer = gameState.getPlayerGameObjects();
         List<GameObject> listLawanDihindari = new ArrayList<GameObject>();
@@ -251,7 +252,7 @@ public class BotService {
             return false;
         }
     }
-
+    // Fungsi untuk menghindar dari serangan torpedo
     private boolean hindariTorpedo(PlayerAction playerAction){
         if (!gameState.getGameObjects().isEmpty()) {
             var listTorp = gameState.getGameObjects()
@@ -283,7 +284,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk mengambil makanan
     private boolean ambilMakanan(PlayerAction playerAction, Position tujuan){
         if (!gameState.getGameObjects().isEmpty()) {
             var foodList = gameState.getGameObjects()
@@ -296,9 +297,6 @@ public class BotService {
             while (i < foodList.size()){
                 double radPlayer = getDistanceBetween(foodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius){
-                    //System.out.println(String.format("%d %d",bot.position.x,bot.position.y));
-                    //System.out.println(String.format("%d %d %d %f",i,foodList.get(i).position.x, foodList.get(i).position.y, getDistanceBetween(bot, foodList.get(i))));
-                    //System.out.println(String.format("%d %d %d %f",i+1,foodList.get(i+1).position.x, foodList.get(i+1).position.y, getDistanceBetween(bot, foodList.get(i+1))));
                     playerAction.heading = getHeadingBetween(foodList.get(i));
                     System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
@@ -309,7 +307,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk mengambil superfood
     private boolean ambilSuperFood(PlayerAction playerAction, Position tujuan){
         if (!gameState.getGameObjects().isEmpty()) {
             var superFoodList = gameState.getGameObjects()
@@ -323,11 +321,7 @@ public class BotService {
                 if (!isInRadius(superFoodList.get(i), bot.getPosition(), bot.getSize()*2)) break;
                 double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius) {
-                    //System.out.print(superFoodList.get(i).position.x);
-                    //System.out.print(" ");
-                    //System.out.println(superFoodList.get(i).position.y);
                     playerAction.heading = getHeadingBetween(superFoodList.get(i));
-                    //System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
                     return true;
                 }
@@ -336,7 +330,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk menembakkan torpedo
     private boolean tembakTorpedo(PlayerAction player){
         var listMusuh = gameState.getPlayerGameObjects().stream()
                     .filter(item -> item.getId() != bot.getId()).sorted(Comparator
@@ -350,7 +344,7 @@ public class BotService {
         }
         return false;
     }
-    
+    // Fungsi untuk mengejar musuh
     private boolean kejarMusuh(PlayerAction aksi)
     {
         var musuhList = gameState.getPlayerGameObjects()
@@ -379,9 +373,8 @@ public class BotService {
             i++;
         }
         return false;
-        
     }
-
+    // Fungsi untuk merebut supernova
     private boolean ambilSupernova(PlayerAction aksi)
     {
         if (!gameState.getGameObjects().isEmpty()){
@@ -420,7 +413,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk menembakkan supernova
     private boolean tembakSupernova(PlayerAction aksi){
         if (bot.superNovaAvailable > 0){
             if (wait < 5) wait++;
@@ -436,7 +429,7 @@ public class BotService {
         }
         return false;
     }
-
+    // Fungsi untuk meledakkan supernova
     private boolean ledakkanSupernova(PlayerAction aksi){
         var listSupernovaBomb = gameState.getGameObjects().stream().filter(item->item.getGameObjectType() == ObjectTypes.SUPERNOVABOMB)
                                 .collect(Collectors.toList());
@@ -446,8 +439,7 @@ public class BotService {
                 aksi.action = PlayerActions.DETONATESUPERNOVA;
                 return true;
             }
-            var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
-                            collect(Collectors.toList());
+            var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).collect(Collectors.toList());
             for (int i = 0;i < listMusuh.size();i++){
                 if (isInRadius(listMusuh.get(i), bom.getPosition(), 150) && !isInRadius(bot, bom.getPosition(), 150)){
                     aksi.action = PlayerActions.DETONATESUPERNOVA;
