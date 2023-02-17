@@ -423,13 +423,15 @@ public class BotService {
 
     private boolean tembakSupernova(PlayerAction aksi){
         if (bot.superNovaAvailable > 0){
-            if (wait < 1) wait++;
+            if (wait < 5) wait++;
             else {
-                playerAction.action = PlayerActions.FIRESUPERNOVA;
                 var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
-                            sorted(Comparator.comparing(item->-item.getSize())).collect(Collectors.toList());
-                playerAction.heading = getHeadingBetween(listMusuh.get(0));
-                return true;
+                            sorted(Comparator.comparing(item->-getDistanceBetween(bot, item))).collect(Collectors.toList());
+                if (!isInRadius(bot, listMusuh.get(0).position, 150)){
+                    playerAction.action = PlayerActions.FIRESUPERNOVA;
+                    playerAction.heading = getHeadingBetween(listMusuh.get(0));
+                    return true;
+                }
             }
         }
         return false;
@@ -447,7 +449,7 @@ public class BotService {
             var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
                             collect(Collectors.toList());
             for (int i = 0;i < listMusuh.size();i++){
-                if (isInRadius(listMusuh.get(i), bom.getPosition(), 100)){
+                if (isInRadius(listMusuh.get(i), bom.getPosition(), 150) && !isInRadius(bot, bom.getPosition(), 150)){
                     aksi.action = PlayerActions.DETONATESUPERNOVA;
                     return true;
                 }
