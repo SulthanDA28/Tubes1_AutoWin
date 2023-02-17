@@ -43,7 +43,16 @@
 
 <br>
 
- - Jalankan file run.bat
+ - Jalankan runner, engine, dan logger secara berurutan, pastikan BotCount pada appsettings runner dan enginer disesuaikan berdasarkan kebutuhan
+ - jalankan bot yang akan digunakan, disesuaikan dengan BotCount.
+   untuk referencebot,
+   ```
+   dotnet reference-bot-publish/ReferenceBot.dll
+   ```
+   untuk AutoWin bot,
+   ```
+   java -jar Tubes1_AutoWin\target\AutoWin.jar
+   ```
  - Buka visuallizer lalu buka game sesuai dengan OS yang digunakan
  - Load dengan log file terbaru
 
