@@ -103,6 +103,7 @@ public class BotService {
         
         double radPlayer = getDistanceBetween(bot, 0, 0) + bot.getSize();
         if (isInEffect(bot, Effects.AFTERBURNER) && (bot.getSize() < 10 || !isChased || !isKejarSuper)){
+            System.out.println("Mematikan afterburner");
             playerAction.action = PlayerActions.STOPAFTERBURNER;
         } else
         if (radPlayer >= getGameState().world.radius){
@@ -221,6 +222,7 @@ public class BotService {
         int maxSpeed = -1;
         for (int i = 0;i < listPlayer.size();i++){
             var lawan = listPlayer.get(i);
+            // Ambil kandidat musuh yang akan dihindari, yaitu berada pada range tertentu
             if (lawan.getId() != bot.getId()
                 && isInRadius(lawan, bot.getPosition(), Math.max(50,bot.getSize()*3))
                 && lawan.getSize() > bot.getSize()){
@@ -230,22 +232,27 @@ public class BotService {
         }
         if (!listLawanDihindari.isEmpty()){
             var sorted = listLawanDihindari.stream().sorted(Comparator.comparing(item -> getDistanceBetween(bot, item))).collect(Collectors.toList());
-            if (bot.getSpeed() < maxSpeed && bot.getSize() > 10 && ((bot.effects & Effects.AFTERBURNER.value)==0)){
-                playerAction.action = PlayerActions.STARTAFTERBURNER;
-            } else {
-                playerAction.action = PlayerActions.FORWARD;
+            // tembakkan torpedo pada lawan terdekat yang tidak memiliki shield
+            for (int i = 0;i < sorted.size();i++){
+                if (bot.getSize()>20 && bot.torpedoSalvoCount > 0 && !isInEffect(sorted.get(i), Effects.SHIELD)){
+                    playerAction.action = PlayerActions.FIRETORPEDOES;
+                    playerAction.heading = getHeadingBetween(sorted.get(i));
+                    return true;
+                }
             }
+            // lari dari musuh, arahnya berupa berlawanan dengan rata-rata heading musuh ke pemain
             int meanArahLawan = 0;
             for (int i = 0;i < sorted.size();i++){
                 meanArahLawan += getHeadingBetween(sorted.get(i));
             }
-            if (bot.getSize()>20 && bot.torpedoSalvoCount > 0 && !isInEffect(sorted.get(0), Effects.SHIELD)){
-                playerAction.action = PlayerActions.FIRETORPEDOES;
-                playerAction.heading = getHeadingBetween(sorted.get(0));
+            if (bot.getSpeed() < maxSpeed && bot.getSize() > 10 && (!isInEffect(bot,Effects.AFTERBURNER))){
+                // hidupkan afterburner jika speed kurang dan size mencukupi
+                playerAction.action = PlayerActions.STARTAFTERBURNER;
             } else {
-                meanArahLawan /= listLawanDihindari.size();
-                playerAction.heading = (meanArahLawan+135)%360;
+                playerAction.action = PlayerActions.FORWARD;
             }
+            meanArahLawan /= listLawanDihindari.size();
+            playerAction.heading = (meanArahLawan+135)%360;
             return true;
         } else {
             return false;
@@ -262,13 +269,16 @@ public class BotService {
             if (!listTorp.isEmpty()){
                 int i = 0;
                 while (i < listTorp.size()){
+                    // hindari torpedo terdekat dan mengarah ke badan pemain
                     double range = Math.abs(Math.atan(bot.getSize()/getDistanceBetween(bot, listTorp.get(i))));
                     int headingTorpToPlayer = (getHeadingBetween(listTorp.get(i))+180)%360;
                     double anglediff = (headingTorpToPlayer-listTorp.get(i).currentHeading+180+360)%360-180;
                     if (anglediff <= range && anglediff >= -range){
                         if (bot.getSize() > 40 && isInRadius(listTorp.get(i), bot.getPosition(), bot.getSize()*2)){
+                            // jika mencukupi, gunakan shield
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                         } else {
+                            // jika masih jauh, gunakan afterburner dan lari searah 90 derajat ccw dr heading ke torpedo
                             if (bot.getSize() >= 10 && !isInEffect(bot, Effects.AFTERBURNER)) 
                                 playerAction.action = PlayerActions.STARTAFTERBURNER;
                             else 
@@ -292,13 +302,10 @@ public class BotService {
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
             int i = 0;
-            // ambil makanan yang tidak menyebabkan player menyentuh batas arena
+            // ambil makanan terdekat yang tidak menyebabkan player menyentuh batas arena
             while (i < foodList.size()){
                 double radPlayer = getDistanceBetween(foodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius){
-                    //System.out.println(String.format("%d %d",bot.position.x,bot.position.y));
-                    //System.out.println(String.format("%d %d %d %f",i,foodList.get(i).position.x, foodList.get(i).position.y, getDistanceBetween(bot, foodList.get(i))));
-                    //System.out.println(String.format("%d %d %d %f",i+1,foodList.get(i+1).position.x, foodList.get(i+1).position.y, getDistanceBetween(bot, foodList.get(i+1))));
                     playerAction.heading = getHeadingBetween(foodList.get(i));
                     System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
@@ -318,16 +325,12 @@ public class BotService {
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
             int i = 0;
-            // ambil superfood yang tidak menyebabkan player menyentuh batas arena dan di dalam radius player
+            // ambil superfood terdekat yang tidak menyebabkan player menyentuh batas arena dan di dalam radius player
             while (i < superFoodList.size()){
                 if (!isInRadius(superFoodList.get(i), bot.getPosition(), bot.getSize()*2)) break;
                 double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius) {
-                    //System.out.print(superFoodList.get(i).position.x);
-                    //System.out.print(" ");
-                    //System.out.println(superFoodList.get(i).position.y);
                     playerAction.heading = getHeadingBetween(superFoodList.get(i));
-                    //System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
                     return true;
                 }
@@ -342,6 +345,7 @@ public class BotService {
                     .filter(item -> item.getId() != bot.getId()).sorted(Comparator
                     .comparing(item -> getDistanceBetween(bot, item))).collect(Collectors.toList());
         for (int i = 0;i < listMusuh.size();i++){
+            // tembak torpedo ke musuh terdekat yang tidak menggunakan shield
             if (!isInEffect(listMusuh.get(i),Effects.SHIELD)){
                 playerAction.action = PlayerActions.FIRETORPEDOES;
                 playerAction.heading = getHeadingBetween(listMusuh.get(i));
@@ -353,6 +357,7 @@ public class BotService {
     
     private boolean kejarMusuh(PlayerAction aksi)
     {
+        // kejar kandidat musuh terdekat
         var musuhList = gameState.getPlayerGameObjects()
             .stream().filter(item->item.getId()!=bot.getId())
             .sorted(Comparator.comparing(item->getDistanceBetween(bot, item)))
@@ -363,15 +368,17 @@ public class BotService {
         {
             double sizemusuh = musuhList.get(i).getSize();
             if (bot.getSize()>sizemusuh && firedTeleporter != null && isInRadius(musuhList.get(i), firedTeleporter.getPosition(), bot.getSize())){
+                // jika teleport milik pemain mengenai musuh yang lebih kecil, langsung teleport
                 aksi.action = PlayerActions.TELEPORT;
                 return true;
             } else
-            if(bot.getSize()-15>sizemusuh && isInRadius(musuhList.get(i), bot.getPosition(), bot.getSize()*2))
-            {
+            if (bot.getSize()-15>sizemusuh && isInRadius(musuhList.get(i), bot.getPosition(), bot.getSize()*2)){
+                // jika dekat dengan pemain, kejar secara manual
                     aksi.heading = getHeadingBetween(musuhList.get(i));
                     aksi.action = PlayerActions.FORWARD;
                     return true;
             } else if (firedTeleporter == null && bot.size-40-15 > sizemusuh){
+                // jika jauh dan perbedaan size cukup besar serta size pemain mencukupi, tembakkan teleporter ke musuh tersebut
                 aksi.action = PlayerActions.FIRETELEPORT;
                 aksi.heading = getHeadingBetween(musuhList.get(i));
                 return true;
@@ -391,13 +398,18 @@ public class BotService {
 
             if(supernova.size()>0){
                 for (int i = 0;i < gameState.getGameObjects().size();i++){
+                    //jika supernova berada didalam obstacle, jangan ambil
                     var obj = gameState.getGameObjects().get(i);
                     if (isObstacle(obj) && isInRadius(supernova.get(0), obj.position, obj.size)){
                         return false;
                     }
                 }
-
+                if (firedTeleporter != null && isInRadius(supernova.get(0), firedTeleporter.position, bot.getSize()*2)){
+                    // gunakan teleporter jika sudah ditembakkan dan teleporter mengenai supernova
+                    aksi.action = PlayerActions.TELEPORT;
+                }
                 if (isInRadius(bot, supernova.get(0).getPosition(), 250)){ 
+                    // jika pada range tertentu, gunakan afterburner
                     if(!isInEffect(bot, Effects.AFTERBURNER)&& bot.getSize()>10){
                         aksi.action = PlayerActions.STARTAFTERBURNER;
                     } 
@@ -406,10 +418,9 @@ public class BotService {
                     }
                     
                 } else {
+                    // jika diluar range, gunakan teleporter jika mencukupi, jalan jika tidak
                     if (firedTeleporter == null && bot.getSize() >= 40){
                         aksi.action = PlayerActions.FIRETELEPORT;
-                    } else if (firedTeleporter != null && isInRadius(supernova.get(0), firedTeleporter.position, bot.getSize()*2)){
-                        aksi.action = PlayerActions.TELEPORT;
                     } else {
                         aksi.action = PlayerActions.FORWARD;
                     }
@@ -425,6 +436,7 @@ public class BotService {
         if (bot.superNovaAvailable > 0){
             if (wait < 5) wait++;
             else {
+                // tembakkan supernova ke musuh terjauh yang ledakannya diperkirakan tidak mengenai pemain
                 var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
                             sorted(Comparator.comparing(item->-getDistanceBetween(bot, item))).collect(Collectors.toList());
                 if (!isInRadius(bot, listMusuh.get(0).position, 150)){
@@ -443,12 +455,14 @@ public class BotService {
         if (!listSupernovaBomb.isEmpty()){
             var bom = listSupernovaBomb.get(0);
             if (getDistanceBetween(bom, 0,0) >= 0.90*gameState.world.radius){
+                // ledakkan paksa supernova jika akan keluar dari arena (untuk menghindari bug)
                 aksi.action = PlayerActions.DETONATESUPERNOVA;
                 return true;
             }
             var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
                             collect(Collectors.toList());
             for (int i = 0;i < listMusuh.size();i++){
+                // ledakkan jika ledakan supernova akan mengenai musuh dan ledakan tersebut tidak mengenai pemain
                 if (isInRadius(listMusuh.get(i), bom.getPosition(), 150) && !isInRadius(bot, bom.getPosition(), 150)){
                     aksi.action = PlayerActions.DETONATESUPERNOVA;
                     return true;

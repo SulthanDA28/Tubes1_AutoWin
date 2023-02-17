@@ -79,5 +79,6 @@ public class Main {
         });
 
         hubConnection.stop();
+        System.exit(0);
     }
 }
