@@ -58,7 +58,7 @@ public class BotService {
                     }
             }
         } else {
-            System.out.println(String.format("TELEPORTETET %d %d",firedTeleporter.position.x,firedTeleporter.position.y));
+            System.out.println(String.format("TELEPORT SHOT at %d %d",firedTeleporter.position.x,firedTeleporter.position.y));
         }
 
         boolean isChased = false, isKejarSuper = false;
