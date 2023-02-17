@@ -51,7 +51,7 @@ public class BotService {
             for (int i = 0;i < listTp.size();i++){
                 GameObject obj = listTp.get(i);
                 if (obj.getGameObjectType() == ObjectTypes.TELEPORTER && 
-                    isInRadius(obj, bot.position.x, bot.position.y, bot.size+50)){
+                    isInRadius(obj, bot.position, bot.size+50)){
                         firedTeleporter = obj;
                         break;
                     }
@@ -107,7 +107,7 @@ public class BotService {
                 boolean sudah = false;
                 for (int i = 0;i < listObstacle.size();i++){
                     int headingToObs = getHeadingBetween(listObstacle.get(i));
-                    if (isInRadius(listObstacle.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize())){
+                    if (isInRadius(listObstacle.get(i), bot.getPosition(), bot.getSize())){
                         System.out.println("Keluar dari obstacle");
                         playerAction.heading = (headingToObs+180)%360;
                         sudah = true;
@@ -116,7 +116,7 @@ public class BotService {
                 }
                 for (int i = 0;i < listObstacle.size() && !sudah;i++){
                     int headingToObs = getHeadingBetween(listObstacle.get(i));
-                    if (isInRadius(listObstacle.get(i), newPosition.x, newPosition.y, bot.getSize())){
+                    if (isInRadius(listObstacle.get(i), newPosition, bot.getSize())){
                         System.out.println(headingToObs);
                         System.out.println("CCW");
                         playerAction.heading = (headingToObs+90)%360;
@@ -185,8 +185,8 @@ public class BotService {
         return (int) (v * (180 / Math.PI));
     }
 
-    private boolean isInRadius(GameObject a, int x, int y, double r){
-        double length = getDistanceBetween(a, x, y);
+    private boolean isInRadius(GameObject a, Position p, double r){
+        double length = getDistanceBetween(a, p.x, p.y);
         return (length <= a.getSize()+r);
     }
 
@@ -212,7 +212,7 @@ public class BotService {
         for (int i = 0;i < listPlayer.size();i++){
             var lawan = listPlayer.get(i);
             if (lawan.getId() != bot.getId()
-                && isInRadius(lawan, bot.getPosition().getX(), bot.getPosition().getY(), Math.max(50,bot.getSize()*3))
+                && isInRadius(lawan, bot.getPosition(), Math.max(50,bot.getSize()*3))
                 && lawan.getSize() > bot.getSize()){
                     listLawanDihindari.add(lawan);
                     maxSpeed = Math.max(maxSpeed,lawan.getSpeed());
@@ -256,7 +256,7 @@ public class BotService {
                     int headingTorpToPlayer = (getHeadingBetween(listTorp.get(i))+180)%360;
                     double anglediff = (headingTorpToPlayer-listTorp.get(i).currentHeading+180+360)%360-180;
                     if (anglediff <= range && anglediff >= -range){
-                        if (bot.getSize() > 40 && isInRadius(listTorp.get(i), bot.getPosition().x , bot.getPosition().y, bot.getSize()*2)){
+                        if (bot.getSize() > 40 && isInRadius(listTorp.get(i), bot.getPosition(), bot.getSize()*2)){
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                         } else {
                             if (bot.getSize() >= 10 && !isInEffect(bot, Effects.AFTERBURNER)) 
@@ -310,7 +310,7 @@ public class BotService {
             int i = 0;
             // ambil superfood yang tidak menyebabkan player menyentuh batas arena dan di dalam radius player
             while (i < superFoodList.size()){
-                if (!isInRadius(superFoodList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*2)) break;
+                if (!isInRadius(superFoodList.get(i), bot.getPosition(), bot.getSize()*2)) break;
                 double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius) {
                     //System.out.print(superFoodList.get(i).position.x);
@@ -352,11 +352,11 @@ public class BotService {
         while(i<musuhList.size())
         {
             double sizemusuh = musuhList.get(i).getSize();
-            if (bot.getSize()>sizemusuh && firedTeleporter != null && isInRadius(musuhList.get(i), firedTeleporter.getPosition().x, firedTeleporter.getPosition().y, bot.getSize())){
+            if (bot.getSize()>sizemusuh && firedTeleporter != null && isInRadius(musuhList.get(i), firedTeleporter.getPosition(), bot.getSize())){
                 aksi.action = PlayerActions.TELEPORT;
                 return true;
             } else
-            if(bot.getSize()-15>sizemusuh && isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*2))
+            if(bot.getSize()-15>sizemusuh && isInRadius(musuhList.get(i), bot.getPosition(), bot.getSize()*2))
             {
                     aksi.heading = getHeadingBetween(musuhList.get(i));
                     aksi.action = PlayerActions.FORWARD;
