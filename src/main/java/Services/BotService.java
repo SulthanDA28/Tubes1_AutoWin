@@ -7,6 +7,8 @@ import Models.Vector;
 import java.util.*;
 import java.util.stream.*;
 
+import javax.swing.UIDefaults.ProxyLazyValue;
+
 public class BotService {
     private GameObject bot;
     private PlayerAction playerAction;
@@ -36,9 +38,20 @@ public class BotService {
     }
 
     public void computeNextPlayerAction(PlayerAction playerAction) {
+        if (gameState.getWorld().radius == null) {
+            playerAction.action = PlayerActions.STOP;
+            System.out.println("World is null\n");
+            return;
+        }
+        boolean isChased = false;
         Position tujuan = new Position();
+        if (hindariTorpedo(playerAction)){
+            System.out.println("Menghindari torpedo");
+            isChased = true;
+        } else
         if (hindariMusuh(playerAction, tujuan)){
             System.out.println("Menghindari musuh");
+            isChased = true;
         }else 
         if (kejarMusuh(playerAction)){
             System.out.println("Kejar musuh");
@@ -49,15 +62,57 @@ public class BotService {
         } else
         if (ambilMakanan(playerAction, tujuan)){
             System.out.println("Ambil makanan");
+        } else
+        if (tembakTorpedo(playerAction)){
+            System.out.println("Serang lawan");
         } else {
             System.out.println("Random");
             playerAction.action = PlayerActions.FORWARD;
             playerAction.heading = new Random().nextInt(360);
 
         }
+        
+        double radPlayer = getDistanceBetween(bot, 0, 0) + bot.getSize();
+        if (bot.getSize() < 10 || (isInEffect(bot, Effects.AFTERBURNER) && !isChased)){
+            playerAction.action = PlayerActions.STOPAFTERBURNER;
+        } else
+        if (radPlayer >= getGameState().world.radius){
+            playerAction.heading = getHeadingBetween(0, 0);
+            playerAction.action = PlayerActions.FORWARD;
+            System.out.println("Melewati batas peta, kembali ke pusat...");
+        } else
+        if (playerAction.action == PlayerActions.FORWARD){
+            if (!isChased){
+                Position newPosition = nextPosition(playerAction);
+                var listObstacle = gameState.getGameObjects()
+                    .stream().filter(item -> isObstacle(item))
+                    .collect(Collectors.toList());
+                boolean sudah = false;
+                for (int i = 0;i < listObstacle.size();i++){
+                    int headingToObs = getHeadingBetween(listObstacle.get(i));
+                    if (isInRadius(listObstacle.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize())){
+                        System.out.println("Keluar dari obstacle");
+                        playerAction.heading = (headingToObs+180)%360;
+                        sudah = true;
+                        break;
+                    }
+                }
+                for (int i = 0;i < listObstacle.size() && !sudah;i++){
+                    int headingToObs = getHeadingBetween(listObstacle.get(i));
+                    if (isInRadius(listObstacle.get(i), newPosition.x, newPosition.y, bot.getSize())){
+                        System.out.println(headingToObs);
+                        System.out.println("CCW");
+                        playerAction.heading = (headingToObs+90)%360;
+                        System.out.println("Menghindari obstacle");
+                        break;
+                    }
+                }
+            }
+        }
+
         this.playerAction = playerAction;
-        System.out.println(playerAction.action);
-        System.out.println(playerAction.heading);
+        System.out.println(this.playerAction.action);
+        System.out.println(this.playerAction.heading);
         System.out.println();
     }
 
@@ -68,28 +123,66 @@ public class BotService {
         for (int i = 0;i < listPlayer.size();i++){
             var lawan = listPlayer.get(i);
             if (lawan.getId() != bot.getId()
-                && isInRadius(lawan, bot.getPosition().getX(), bot.getPosition().getY(), Math.max(50,bot.getSize()+20))
+                && isInRadius(lawan, bot.getPosition().getX(), bot.getPosition().getY(), Math.max(50,bot.getSize()*3))
                 && lawan.getSize() > bot.getSize()){
                     listLawanDihindari.add(lawan);
                     maxSpeed = Math.max(maxSpeed,lawan.getSpeed());
                 }
         }
         if (!listLawanDihindari.isEmpty()){
+            var sorted = listLawanDihindari.stream().sorted(Comparator.comparing(item -> getDistanceBetween(bot, item))).collect(Collectors.toList());
             if (bot.getSpeed() < maxSpeed && bot.getSize() > 10 && ((bot.effects & Effects.AFTERBURNER.value)==0)){
                 playerAction.action = PlayerActions.STARTAFTERBURNER;
             } else {
                 playerAction.action = PlayerActions.FORWARD;
             }
             int meanArahLawan = 0;
-            for (int i = 0;i < listLawanDihindari.size();i++){
-                meanArahLawan += getHeadingBetween(listLawanDihindari.get(i));
+            for (int i = 0;i < sorted.size();i++){
+                meanArahLawan += getHeadingBetween(sorted.get(i));
             }
-            meanArahLawan /= listLawanDihindari.size();
-            playerAction.heading = (meanArahLawan+90)%360;
+            if (bot.getSize()>20 && bot.torpedoSalvoCount > 0 && !isInEffect(sorted.get(0), Effects.SHIELD)){
+                playerAction.action = PlayerActions.FIRETORPEDOES;
+                playerAction.heading = getHeadingBetween(sorted.get(0));
+            } else {
+                meanArahLawan /= listLawanDihindari.size();
+                playerAction.heading = (meanArahLawan+135)%360;
+            }
             return true;
         } else {
             return false;
         }
+    }
+
+    private boolean hindariTorpedo(PlayerAction playerAction){
+        if (!gameState.getGameObjects().isEmpty()) {
+            var listTorp = gameState.getGameObjects()
+                    .stream().filter(item -> item.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+            if (!listTorp.isEmpty()){
+                int i = 0;
+                while (i < listTorp.size()){
+                    double range = Math.abs(Math.atan(bot.getSize()/getDistanceBetween(bot, listTorp.get(i))));
+                    int headingTorpToPlayer = (getHeadingBetween(listTorp.get(i))+180)%360;
+                    double anglediff = (headingTorpToPlayer-listTorp.get(i).currentHeading+180+360)%360-180;
+                    if (anglediff <= range && anglediff >= -range){
+                        if (bot.getSize() > 40 && isInRadius(listTorp.get(i), bot.getPosition().x , bot.getPosition().y, bot.getSize()*2)){
+                            playerAction.action = PlayerActions.ACTIVATESHIELD;
+                        } else {
+                            if (!isInEffect(bot, Effects.AFTERBURNER)) 
+                                playerAction.action = PlayerActions.STARTAFTERBURNER;
+                            else 
+                                playerAction.action = PlayerActions.FORWARD;
+                            playerAction.heading = (getHeadingBetween(listTorp.get(i))+90)%360;
+                        }
+                        return true;
+                    }
+                    i++;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean ambilMakanan(PlayerAction playerAction, Position tujuan){
@@ -104,10 +197,12 @@ public class BotService {
             while (i < foodList.size()){
                 double radPlayer = getDistanceBetween(foodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius){
+                    System.out.println(String.format("%d %d",bot.position.x,bot.position.y));
+                    System.out.println(String.format("%d %d %d %f",i,foodList.get(i).position.x, foodList.get(i).position.y, getDistanceBetween(bot, foodList.get(i))));
+                    System.out.println(String.format("%d %d %d %f",i+1,foodList.get(i+1).position.x, foodList.get(i+1).position.y, getDistanceBetween(bot, foodList.get(i+1))));
                     playerAction.heading = getHeadingBetween(foodList.get(i));
+                    System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
-                    tujuan.x = foodList.get(i).position.x;
-                    tujuan.y = foodList.get(i).position.y;
                     return true;
                 }
                 i++;
@@ -126,16 +221,32 @@ public class BotService {
             int i = 0;
             // ambil superfood yang tidak menyebabkan player menyentuh batas arena dan di dalam radius player
             while (i < superFoodList.size()){
-                if (!isInRadius(superFoodList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*3)) break;
+                if (!isInRadius(superFoodList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*2)) break;
                 double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius) {
+                    System.out.print(superFoodList.get(i).position.x);
+                    System.out.print(" ");
+                    System.out.println(superFoodList.get(i).position.y);
                     playerAction.heading = getHeadingBetween(superFoodList.get(i));
+                    System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
-                    tujuan.x = superFoodList.get(i).position.x;
-                    tujuan.y = superFoodList.get(i).position.y;
                     return true;
                 }
                 i++;
+            }
+        }
+        return false;
+    }
+
+    private boolean tembakTorpedo(PlayerAction player){
+        var listMusuh = gameState.getPlayerGameObjects().stream()
+                    .filter(item -> item.getId() != bot.getId()).sorted(Comparator
+                    .comparing(item -> getDistanceBetween(bot, item))).collect(Collectors.toList());
+        for (int i = 0;i < listMusuh.size();i++){
+            if (!isInEffect(listMusuh.get(i),Effects.SHIELD)){
+                playerAction.action = PlayerActions.FIRETORPEDOES;
+                playerAction.heading = getHeadingBetween(listMusuh.get(i));
+                return true;
             }
         }
         return false;
@@ -173,39 +284,49 @@ public class BotService {
         return (direction + 360) % 360;
     }
 
+    private int getHeadingBetween(int x, int y) {
+        var direction = toDegrees(Math.atan2(y - bot.getPosition().y, x - bot.getPosition().x));
+        return (direction + 360) % 360;
+    }
+
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
     }
 
     private boolean isInRadius(GameObject a, int x, int y, double r){
         double length = getDistanceBetween(a, x, y);
-        return (length < a.getSize()+r);
+        return (length <= a.getSize()+r);
     }
 
-    private boolean willIntersect(GameObject a, GameObject b, Position dest){
-        int B = 1;
-        int A = -(dest.y-a.getPosition().y)/(dest.x-a.getPosition().x);
-        int C = -(a.getPosition().y*A+a.getPosition().x*B);
-        double dist = Math.abs(A*b.getPosition().x + B*b.getPosition().y+C)/Math.sqrt(A*A+B*B);
-        return Vector.sudut(a.getPosition(),dest,b.getPosition()) <= 90 && 
-                Vector.sudut(dest, a.getPosition(), b.getPosition()) <= 90 &&
-                a.size+b.size < dist;
+    private Position nextPosition(PlayerAction playerAction){
+        int x = bot.getPosition().x+(int)(bot.getSpeed()*Math.cos(playerAction.heading));
+        int y = bot.getPosition().y+(int)(bot.getSpeed()*Math.sin(playerAction.heading));
+        return new Position(x,y);
+    }
+
+    private boolean isInEffect(GameObject obj, Effects effect){
+        return (obj.effects & effect.value) > 0;
+    }
+
+    private boolean isHeadingLeftThan(int heading1, int heading2){
+        if (heading2 >= heading1){
+            if (heading2-heading1 >= 180){
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            if (heading1-heading2 <= 180){
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     private boolean isObstacle(GameObject a){
         ObjectTypes objT = a.getGameObjectType();
-        return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE || objT == ObjectTypes.PLAYER || objT == ObjectTypes.PLAYER;
-    }
-
-    private boolean isPathFreeOfObstacle(GameObject a, GameObject b, GameObject obstacle){
-        List<GameObject> gameobj = gameState.getGameObjects();
-        for (int i = 0;i < gameobj.size();i++){
-            if (isObstacle(gameobj.get(i)) &&
-                 willIntersect(bot, gameobj.get(i), b.getPosition())){
-                return false;
-            }
-        }
-        return true;
+        return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE;
     }
 
     private boolean kejarMusuh(PlayerAction aksi)
