@@ -1,5 +1,4 @@
 Main.class
-Models\Vector.class
 Enums\Effects.class
 Enums\PlayerActions.class
 Models\GameState.class
