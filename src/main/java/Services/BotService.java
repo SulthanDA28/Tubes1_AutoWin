@@ -351,4 +351,31 @@ public class BotService {
         return false;
         
     }
+
+
+
+    private boolean ambilSupernova(PlayerAction aksi)
+    {
+        if (!gameState.getGameObjects().isEmpty()){
+            var supernova = gameState.getGameObjects()
+            .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERNOVAPICKUP)
+            .collect(Collectors.toList());
+            if(supernova.size()>0){
+                if(aksi.action!=PlayerActions.STARTAFTERBURNER){
+                    aksi.action = PlayerActions.STARTAFTERBURNER;
+                }
+                else if(aksi.action==PlayerActions.STARTAFTERBURNER && bot.getSize()>=10)
+                {
+                    aksi.action = PlayerActions.STARTAFTERBURNER;
+                }
+                else{
+                    aksi.action = PlayerActions.FORWARD;
+                }
+                aksi.heading = getHeadingBetween(supernova.get(0));
+                return true;
+            }
+            return false;
+        }
+        
+    }
 }
