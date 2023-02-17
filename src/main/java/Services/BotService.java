@@ -374,8 +374,7 @@ public class BotService {
                 aksi.heading = getHeadingBetween(supernova.get(0));
                 return true;
             }
-            return false;
         }
-        
+        return false;
     }
 }
