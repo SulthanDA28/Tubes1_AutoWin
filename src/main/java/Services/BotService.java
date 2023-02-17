@@ -13,7 +13,8 @@ public class BotService {
     private PlayerAction playerAction;
     private GameState gameState;
     private GameObject firedTeleporter;
-    
+    private int wait = 0;
+
     public BotService() {
         this.playerAction = new PlayerAction();
         this.gameState = new GameState();
@@ -62,6 +63,10 @@ public class BotService {
 
         boolean isChased = false, isKejarSuper = false;
         Position tujuan = new Position();
+
+        if (ledakkanSupernova(playerAction)){
+            System.out.println("Ledakkan supernova");
+        } else
         if (hindariTorpedo(playerAction)){
             System.out.println("Menghindari torpedo");
             isChased = true;
@@ -69,13 +74,16 @@ public class BotService {
         if (hindariMusuh(playerAction, tujuan)){
             System.out.println("Menghindari musuh");
             isChased = true;
-        }else 
+        
+        } else
+        if (tembakSupernova(playerAction)){
+            System.out.println("Tembak supernova");
+        } else 
         if (kejarMusuh(playerAction)){
             System.out.println("Kejar musuh");
-        }
-        else
+        } else
         if (ambilSupernova(playerAction)){
-            System.out.println("Mengejar supernova");
+            System.out.println("Kejar supernova");
             isKejarSuper = true;
         } else
         if (ambilSuperFood(playerAction, tujuan)){
@@ -102,31 +110,29 @@ public class BotService {
             playerAction.action = PlayerActions.FORWARD;
             System.out.println("Melewati batas peta, kembali ke pusat...");
         } else
-        if (playerAction.action == PlayerActions.FORWARD){
-            if (!isChased){
-                Position newPosition = nextPosition(playerAction);
-                var listObstacle = gameState.getGameObjects()
-                    .stream().filter(item -> isObstacle(item))
-                    .collect(Collectors.toList());
-                boolean sudah = false;
-                for (int i = 0;i < listObstacle.size();i++){
-                    int headingToObs = getHeadingBetween(listObstacle.get(i));
-                    if (isInRadius(listObstacle.get(i), bot.getPosition(), bot.getSize())){
-                        System.out.println("Keluar dari obstacle");
-                        playerAction.heading = (headingToObs+180)%360;
-                        sudah = true;
-                        break;
-                    }
+        if (!isChased){
+            Position newPosition = nextPosition(playerAction);
+            var listObstacle = gameState.getGameObjects()
+                .stream().filter(item -> isObstacle(item))
+                .collect(Collectors.toList());
+            boolean sudah = false;
+            for (int i = 0;i < listObstacle.size();i++){
+                int headingToObs = getHeadingBetween(listObstacle.get(i));
+                if (isInRadius(listObstacle.get(i), bot.getPosition(), bot.getSize())){
+                    System.out.println("Keluar dari obstacle");
+                    playerAction.heading = (headingToObs+180)%360;
+                    sudah = true;
+                    break;
                 }
-                for (int i = 0;i < listObstacle.size() && !sudah;i++){
-                    int headingToObs = getHeadingBetween(listObstacle.get(i));
-                    if (isInRadius(listObstacle.get(i), newPosition, bot.getSize())){
-                        System.out.println(headingToObs);
-                        System.out.println("CCW");
-                        playerAction.heading = (headingToObs+90)%360;
-                        System.out.println("Menghindari obstacle");
-                        break;
-                    }
+            }
+            for (int i = 0;i < listObstacle.size() && !sudah;i++){
+                int headingToObs = getHeadingBetween(listObstacle.get(i));
+                if (isInRadius(listObstacle.get(i), newPosition, bot.getSize())){
+                    System.out.println(headingToObs);
+                    System.out.println("CCW");
+                    playerAction.heading = (headingToObs+90)%360;
+                    System.out.println("Menghindari obstacle");
+                    break;
                 }
             }
         }
@@ -382,7 +388,15 @@ public class BotService {
             var supernova = gameState.getGameObjects()
             .stream().filter(item -> item.getGameObjectType() == ObjectTypes.SUPERNOVAPICKUP)
             .collect(Collectors.toList());
+
             if(supernova.size()>0){
+                for (int i = 0;i < gameState.getGameObjects().size();i++){
+                    var obj = gameState.getGameObjects().get(i);
+                    if (isObstacle(obj) && isInRadius(supernova.get(0), obj.position, obj.size)){
+                        return false;
+                    }
+                }
+
                 if (isInRadius(bot, supernova.get(0).getPosition(), 250)){ 
                     if(!isInEffect(bot, Effects.AFTERBURNER)&& bot.getSize()>10){
                         aksi.action = PlayerActions.STARTAFTERBURNER;
@@ -394,7 +408,7 @@ public class BotService {
                 } else {
                     if (firedTeleporter == null && bot.getSize() >= 40){
                         aksi.action = PlayerActions.FIRETELEPORT;
-                    } else if (firedTeleporter != null && isInRadius(supernova.get(0), firedTeleporter.position, bot.getSize())){
+                    } else if (firedTeleporter != null && isInRadius(supernova.get(0), firedTeleporter.position, bot.getSize()*2)){
                         aksi.action = PlayerActions.TELEPORT;
                     } else {
                         aksi.action = PlayerActions.FORWARD;
@@ -403,6 +417,42 @@ public class BotService {
                 aksi.heading = getHeadingBetween(supernova.get(0));
                 return true;
             }
+        }
+        return false;
+    }
+
+    private boolean tembakSupernova(PlayerAction aksi){
+        if (bot.superNovaAvailable > 0){
+            if (wait < 1) wait++;
+            else {
+                playerAction.action = PlayerActions.FIRESUPERNOVA;
+                var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
+                            sorted(Comparator.comparing(item->-item.getSize())).collect(Collectors.toList());
+                playerAction.heading = getHeadingBetween(listMusuh.get(0));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean ledakkanSupernova(PlayerAction aksi){
+        var listSupernovaBomb = gameState.getGameObjects().stream().filter(item->item.getGameObjectType() == ObjectTypes.SUPERNOVABOMB)
+                                .collect(Collectors.toList());
+        if (!listSupernovaBomb.isEmpty()){
+            var bom = listSupernovaBomb.get(0);
+            if (getDistanceBetween(bom, 0,0) >= 0.90*gameState.world.radius){
+                aksi.action = PlayerActions.DETONATESUPERNOVA;
+                return true;
+            }
+            var listMusuh = gameState.getPlayerGameObjects().stream().filter(item -> item.getId() != bot.getId()).
+                            collect(Collectors.toList());
+            for (int i = 0;i < listMusuh.size();i++){
+                if (isInRadius(listMusuh.get(i), bom.getPosition(), 100)){
+                    aksi.action = PlayerActions.DETONATESUPERNOVA;
+                    return true;
+                }
+            }
+
         }
         return false;
     }
