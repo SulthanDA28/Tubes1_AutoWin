@@ -2,7 +2,6 @@ package Services;
 
 import Enums.*;
 import Models.*;
-import Models.Vector;
 
 import java.util.*;
 import java.util.stream.*;
@@ -13,7 +12,7 @@ public class BotService {
     private GameObject bot;
     private PlayerAction playerAction;
     private GameState gameState;
-
+    private GameObject firedTeleporter;
     
     public BotService() {
         this.playerAction = new PlayerAction();
@@ -43,14 +42,32 @@ public class BotService {
             System.out.println("World is null\n");
             return;
         }
+
+        if (firedTeleporter == null){
+            var listTp = gameState.getGameObjects()
+                        .stream().filter(item -> item.getGameObjectType() == ObjectTypes.TELEPORTER)
+                        .sorted(Comparator.comparing(item -> getDistanceBetween(bot, item)))
+                        .collect(Collectors.toList());
+            for (int i = 0;i < listTp.size();i++){
+                GameObject obj = listTp.get(i);
+                if (obj.getGameObjectType() == ObjectTypes.TELEPORTER && 
+                    isInRadius(obj, bot.position.x, bot.position.y, bot.size+50)){
+                        firedTeleporter = obj;
+                        break;
+                    }
+            }
+        } else {
+            System.out.println(String.format("TELEPORTETET %d %d",firedTeleporter.position.x,firedTeleporter.position.y));
+        }
+
         boolean isChased = false;
         Position tujuan = new Position();
         if (hindariTorpedo(playerAction)){
-            System.out.println("Menghindari torpedo");
+            //System.out.println("Menghindari torpedo");
             isChased = true;
         } else
         if (hindariMusuh(playerAction, tujuan)){
-            System.out.println("Menghindari musuh");
+            //System.out.println("Menghindari musuh");
             isChased = true;
         }else 
         if (kejarMusuh(playerAction)){
@@ -58,13 +75,13 @@ public class BotService {
         }
         else
         if (ambilSuperFood(playerAction, tujuan)){
-            System.out.println("Ambil superfood");
+           // System.out.println("Ambil superfood");
         } else
         if (ambilMakanan(playerAction, tujuan)){
-            System.out.println("Ambil makanan");
+            //System.out.println("Ambil makanan");
         } else
         if (tembakTorpedo(playerAction)){
-            System.out.println("Serang lawan");
+            //System.out.println("Serang lawan");
         } else {
             System.out.println("Random");
             playerAction.action = PlayerActions.FORWARD;
@@ -111,9 +128,12 @@ public class BotService {
         }
 
         this.playerAction = playerAction;
-        System.out.println(this.playerAction.action);
-        System.out.println(this.playerAction.heading);
-        System.out.println();
+        if (playerAction.action == PlayerActions.TELEPORT){
+            System.out.println(this.playerAction.action);
+            System.out.println(this.playerAction.heading);
+            System.out.println();
+        }
+        
     }
 
     public GameState getGameState() {
@@ -123,11 +143,19 @@ public class BotService {
     public void setGameState(GameState gameState) {
         this.gameState = gameState;
         updateSelfState();
+        updateTeleporter();
     }
 
     private void updateSelfState() {
         Optional<GameObject> optionalBot = gameState.getPlayerGameObjects().stream().filter(gameObject -> gameObject.id.equals(bot.id)).findAny();
         optionalBot.ifPresent(bot -> this.bot = bot);
+    }
+
+    private void updateTeleporter() {
+        if (firedTeleporter != null){
+            Optional<GameObject> optionalTeleporter = gameState.getGameObjects().stream().filter(gameObject -> gameObject.id.equals(firedTeleporter.id)).findAny();
+            optionalTeleporter.ifPresentOrElse(tp -> this.firedTeleporter = tp,() -> this.firedTeleporter = null);
+        }  
     }
 
     private double getDistanceBetween(GameObject object1, GameObject object2) {
@@ -258,9 +286,9 @@ public class BotService {
             while (i < foodList.size()){
                 double radPlayer = getDistanceBetween(foodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius){
-                    System.out.println(String.format("%d %d",bot.position.x,bot.position.y));
-                    System.out.println(String.format("%d %d %d %f",i,foodList.get(i).position.x, foodList.get(i).position.y, getDistanceBetween(bot, foodList.get(i))));
-                    System.out.println(String.format("%d %d %d %f",i+1,foodList.get(i+1).position.x, foodList.get(i+1).position.y, getDistanceBetween(bot, foodList.get(i+1))));
+                    //System.out.println(String.format("%d %d",bot.position.x,bot.position.y));
+                    //System.out.println(String.format("%d %d %d %f",i,foodList.get(i).position.x, foodList.get(i).position.y, getDistanceBetween(bot, foodList.get(i))));
+                    //System.out.println(String.format("%d %d %d %f",i+1,foodList.get(i+1).position.x, foodList.get(i+1).position.y, getDistanceBetween(bot, foodList.get(i+1))));
                     playerAction.heading = getHeadingBetween(foodList.get(i));
                     System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
@@ -285,11 +313,11 @@ public class BotService {
                 if (!isInRadius(superFoodList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*2)) break;
                 double radPlayer = getDistanceBetween(superFoodList.get(i), 0, 0) + bot.getSize();
                 if (radPlayer <= getGameState().world.radius) {
-                    System.out.print(superFoodList.get(i).position.x);
-                    System.out.print(" ");
-                    System.out.println(superFoodList.get(i).position.y);
+                    //System.out.print(superFoodList.get(i).position.x);
+                    //System.out.print(" ");
+                    //System.out.println(superFoodList.get(i).position.y);
                     playerAction.heading = getHeadingBetween(superFoodList.get(i));
-                    System.out.println(playerAction.heading);
+                    //System.out.println(playerAction.heading);
                     playerAction.action = PlayerActions.FORWARD;
                     return true;
                 }
@@ -324,10 +352,18 @@ public class BotService {
         while(i<musuhList.size())
         {
             double sizemusuh = musuhList.get(i).getSize();
-            if(isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*3)&&bot.getSize()+6>sizemusuh)
+            if (bot.getSize()>sizemusuh && firedTeleporter != null && isInRadius(musuhList.get(i), firedTeleporter.getPosition().x, firedTeleporter.getPosition().y, bot.getSize())){
+                aksi.action = PlayerActions.TELEPORT;
+                return true;
+            } else
+            if(bot.getSize()-15>sizemusuh && isInRadius(musuhList.get(i), bot.getPosition().x, bot.getPosition().y, bot.getSize()*2))
             {
+                    aksi.heading = getHeadingBetween(musuhList.get(i));
+                    aksi.action = PlayerActions.FORWARD;
+                    return true;
+            } else if (firedTeleporter == null && bot.size-40-15 > sizemusuh){
+                aksi.action = PlayerActions.FIRETELEPORT;
                 aksi.heading = getHeadingBetween(musuhList.get(i));
-                aksi.action = PlayerActions.FORWARD;
                 return true;
             }
             i++;
