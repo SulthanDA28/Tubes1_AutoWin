@@ -116,6 +116,67 @@ public class BotService {
         System.out.println();
     }
 
+    public GameState getGameState() {
+        return this.gameState;
+    }
+
+    public void setGameState(GameState gameState) {
+        this.gameState = gameState;
+        updateSelfState();
+    }
+
+    private void updateSelfState() {
+        Optional<GameObject> optionalBot = gameState.getPlayerGameObjects().stream().filter(gameObject -> gameObject.id.equals(bot.id)).findAny();
+        optionalBot.ifPresent(bot -> this.bot = bot);
+    }
+
+    private double getDistanceBetween(GameObject object1, GameObject object2) {
+        var triangleX = Math.abs(object1.getPosition().x - object2.getPosition().x);
+        var triangleY = Math.abs(object1.getPosition().y - object2.getPosition().y);
+        return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
+    }
+
+    private double getDistanceBetween(GameObject object1, int x, int y) {
+        var triangleX = Math.abs(object1.getPosition().x - x);
+        var triangleY = Math.abs(object1.getPosition().y - y);
+        return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
+    }
+
+    private int getHeadingBetween(GameObject otherObject) {
+        var direction = toDegrees(Math.atan2(otherObject.getPosition().y - bot.getPosition().y,
+                otherObject.getPosition().x - bot.getPosition().x));
+        return (direction + 360) % 360;
+    }
+
+    private int getHeadingBetween(int x, int y) {
+        var direction = toDegrees(Math.atan2(y - bot.getPosition().y, x - bot.getPosition().x));
+        return (direction + 360) % 360;
+    }
+
+    private int toDegrees(double v) {
+        return (int) (v * (180 / Math.PI));
+    }
+
+    private boolean isInRadius(GameObject a, int x, int y, double r){
+        double length = getDistanceBetween(a, x, y);
+        return (length <= a.getSize()+r);
+    }
+
+    private Position nextPosition(PlayerAction playerAction){
+        int x = bot.getPosition().x+(int)(bot.getSpeed()*Math.cos(playerAction.heading));
+        int y = bot.getPosition().y+(int)(bot.getSpeed()*Math.sin(playerAction.heading));
+        return new Position(x,y);
+    }
+
+    private boolean isInEffect(GameObject obj, Effects effect){
+        return (obj.effects & effect.value) > 0;
+    }
+
+    private boolean isObstacle(GameObject a){
+        ObjectTypes objT = a.getGameObjectType();
+        return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE;
+    }
+
     private boolean hindariMusuh(PlayerAction playerAction, Position tujuan){
         var listPlayer = gameState.getPlayerGameObjects();
         List<GameObject> listLawanDihindari = new ArrayList<GameObject>();
@@ -251,84 +312,7 @@ public class BotService {
         }
         return false;
     }
-
-    public GameState getGameState() {
-        return this.gameState;
-    }
-
-    public void setGameState(GameState gameState) {
-        this.gameState = gameState;
-        updateSelfState();
-    }
-
-    private void updateSelfState() {
-        Optional<GameObject> optionalBot = gameState.getPlayerGameObjects().stream().filter(gameObject -> gameObject.id.equals(bot.id)).findAny();
-        optionalBot.ifPresent(bot -> this.bot = bot);
-    }
-
-    private double getDistanceBetween(GameObject object1, GameObject object2) {
-        var triangleX = Math.abs(object1.getPosition().x - object2.getPosition().x);
-        var triangleY = Math.abs(object1.getPosition().y - object2.getPosition().y);
-        return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
-    }
-
-    private double getDistanceBetween(GameObject object1, int x, int y) {
-        var triangleX = Math.abs(object1.getPosition().x - x);
-        var triangleY = Math.abs(object1.getPosition().y - y);
-        return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
-    }
-
-    private int getHeadingBetween(GameObject otherObject) {
-        var direction = toDegrees(Math.atan2(otherObject.getPosition().y - bot.getPosition().y,
-                otherObject.getPosition().x - bot.getPosition().x));
-        return (direction + 360) % 360;
-    }
-
-    private int getHeadingBetween(int x, int y) {
-        var direction = toDegrees(Math.atan2(y - bot.getPosition().y, x - bot.getPosition().x));
-        return (direction + 360) % 360;
-    }
-
-    private int toDegrees(double v) {
-        return (int) (v * (180 / Math.PI));
-    }
-
-    private boolean isInRadius(GameObject a, int x, int y, double r){
-        double length = getDistanceBetween(a, x, y);
-        return (length <= a.getSize()+r);
-    }
-
-    private Position nextPosition(PlayerAction playerAction){
-        int x = bot.getPosition().x+(int)(bot.getSpeed()*Math.cos(playerAction.heading));
-        int y = bot.getPosition().y+(int)(bot.getSpeed()*Math.sin(playerAction.heading));
-        return new Position(x,y);
-    }
-
-    private boolean isInEffect(GameObject obj, Effects effect){
-        return (obj.effects & effect.value) > 0;
-    }
-
-    private boolean isHeadingLeftThan(int heading1, int heading2){
-        if (heading2 >= heading1){
-            if (heading2-heading1 >= 180){
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            if (heading1-heading2 <= 180){
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    private boolean isObstacle(GameObject a){
-        ObjectTypes objT = a.getGameObjectType();
-        return objT == ObjectTypes.ASTEROIDFIELD || objT == ObjectTypes.GASCLOUD || objT == ObjectTypes.WORMHOLE;
-    }
-
+    
     private boolean kejarMusuh(PlayerAction aksi)
     {
         var musuhList = gameState.getPlayerGameObjects()
@@ -351,8 +335,6 @@ public class BotService {
         return false;
         
     }
-
-
 
     private boolean ambilSupernova(PlayerAction aksi)
     {
